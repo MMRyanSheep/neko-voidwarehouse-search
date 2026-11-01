@@ -1,0 +1,37 @@
+// ===== 共享纯逻辑层 =====
+//
+// {@code SearchIndex} 刻意不 import 任何 Minecraft 类型（显示名通过 Function 注入），
+// 所以这一层可以被 5 个版本原样共用，也可以脱离游戏跑 JUnit。
+// Java 目标 21（1.21.11 子工程的字节码下限），26.x 在 JVM 25 上跑 21 字节码没有问题。
+
+plugins {
+    id 'java-library'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    api "com.github.stuxuhai:jpinyin:${project.jpinyin_version}"
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+test {
+    useJUnitPlatform()
+}

@@ -1,0 +1,102 @@
+// ===== Minecraft 1.21.x 版本层（混淆版本）=====
+//
+// 工具链与 modern/26.x 的差异（与 carpet-Neko-Addition 同一套约定）：
+//   - 插件：net.fabricmc.fabric-loom-remap（不是 fabric-loom）
+//   - 映射：Mojang 官方映射 —— 26.x 源码本来就是 Mojang 名（AbstractContainerMenu /
+//     Identifier / BuiltInRegistries…），1.21.11 上这些名字原样可用（javap 已逐个核对）
+//   - Java：21（不是 25）
+//   - 依赖：modImplementation（需要 remap），不是 implementation
+//
+// 与 26.x 的源码差异只有两处（javap 实证）：
+//   ① PayloadTypeRegistry.playC2S()/playS2C()（26.x 叫 serverboundPlay()/clientboundPlay()）
+//   ② 渲染注入：两代容器屏都不渲染 renderables，但 1.21.11 的方法叫
+//      render(GuiGraphics,int,int,float)，注入后手动调 box.render(...)
+
+plugins {
+    id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = "${project.archives_base_name}-mc${project.minecraft_version}"
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings loom.officialMojangMappings()
+
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+    // 混淆版本必须用 modImplementation —— 否则 fabric-api 内部的中间名不会被 remap，
+    // 代码里写的 net.fabricmc.fabric.api.networking.* 运行时会找不到类
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    // 共享纯逻辑（SearchIndex）：jar 打包时把它的 class 一并合并进来
+    implementation project(':common')
+
+    implementation "com.github.stuxuhai:jpinyin:${project.jpinyin_version}"
+    include "com.github.stuxuhai:jpinyin:${project.jpinyin_version}"
+}
+
+loom {
+    runConfigs.configureEach {
+        runDir 'run'
+    }
+}
+
+java {
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+processResources {
+    inputs.property 'version', project.version
+
+    filesMatching('fabric.mod.json') {
+        expand 'version': project.version
+    }
+}
+
+jar {
+    from(project(':common').sourceSets.main.output)
+
+    from(rootProject.file('LICENSE')) {
+        rename { "${it}_${project.base.archivesName.get()}" }
+    }
+}
+
+tasks.named('build') {
+    doLast {
+        def f = tasks.named('jar').get().archiveFile.get().asFile
+        if (f.exists()) {
+            println ''
+            println '============================================================'
+            println "  JAR : ${f.absolutePath}"
+            println "  SIZE: ${f.length()} bytes"
+            println '============================================================'
+        } else {
+            println "  [WARN] jar not found: ${f.absolutePath}"
+        }
+    }
+}
+
+tasks.register('dist', Copy) {
+    group = 'build'
+    description = 'Copies the built mod jar into the workspace deliver/ directory'
+    // loom remap 管线：必须拷 remapJar 产物（映射后的 jar），jar 任务产出的是 dev jar
+    dependsOn tasks.named('remapJar')
+    from tasks.named('remapJar').flatMap { it.archiveFile }
+    into rootProject.layout.projectDirectory.dir('../deliver/neko-voidwarehouse-search')
+}

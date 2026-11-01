@@ -9,4 +9,19 @@ pluginManagement {
     }
 }
 
-rootProject.name = 'voidwarehouse-search'
+rootProject.name = 'neko-voidwarehouse-search'
+
+// ===== 多版本子工程（与 carpet-Neko-Addition 同一套结构约定）=====
+// 新增一个版本 = 复制相邻目录、改它的 gradle.properties，在下面 include 一行。
+
+// ---- 共享纯逻辑（不引用 MC 类型，Java 21，五版本共用）----
+include ':common'
+
+// ---- modern（26.x，不混淆）----
+include ':modern:26.3'
+include ':modern:26.2'
+include ':modern:26.1.2'
+include ':modern:26.1.1'
+
+// ---- versions（1.21.x 及更早，混淆）----
+include ':versions:1.21.11'
