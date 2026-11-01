@@ -3,9 +3,6 @@ package neko.voidwarehouse.search.mixin;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Renderable;
-import net.minecraft.client.gui.components.events.GuiEventListener;
-import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -62,8 +59,9 @@ public abstract class MixinAbstractContainerScreen<T extends net.minecraft.world
     @Shadow
     protected int imageHeight;
 
-    @Shadow
-    protected abstract <W extends GuiEventListener & Renderable & NarratableEntry> W addRenderableWidget(W widget);
+    // 🔴 addRenderableWidget 不在这里 @Shadow：它声明在父类 Screen，而 @Shadow 只查
+    // 目标类自己声明的成员（2026-11-01 真机崩溃实录）—— 父类成员走 AccessorScreen 的
+    // @Invoker，见本类 onInit 里的调用。
 
     @Unique
     private static final int SEARCH_WIDTH = 140;
@@ -104,7 +102,8 @@ public abstract class MixinAbstractContainerScreen<T extends net.minecraft.world
         box.setVisible(false);
         box.setHint(Component.literal("搜索（中文/拼音/ID）"));
         box.setResponder(SearchClientState::onQueryChanged);
-        this.addRenderableWidget(box);
+        // 加入 children（事件路由）+ renderables（narration）；渲染是我们自己出帧的
+        ((AccessorScreen) (Object) this).voidwarehouseSearch$invokeAddRenderableWidget(box);
         this.voidwarehouseSearch$searchBox = box;
         SearchClientState.bind(box);
     }

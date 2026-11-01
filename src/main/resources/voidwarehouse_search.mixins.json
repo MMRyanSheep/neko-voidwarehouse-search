@@ -4,6 +4,7 @@
   "package": "neko.voidwarehouse.search.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
+    "AccessorScreen",
     "MixinAbstractContainerScreen"
   ],
   "mixins": [],
